@@ -158,13 +158,13 @@ static __initdata struct cpuidle_params omap446x_cpuidle_params_table[] = {
 	},
 	/* C3 - CPUx OFF + MPU CSWR + CORE OSWR */
 	{
-		.exit_latency = 1200,
+		.exit_latency = 4000,
 		.target_residency = 4000,
 		.valid = 1,
 	},
 	/* C4 - CPUx OFF + MPU CSWR + CORE OSWR */
 	{
-		.exit_latency = 1400,
+		.exit_latency = 4200,
 		.target_residency = 4200,
 		.valid = CPU_IDLE_ALLOW_OSWR,
 	},
@@ -375,6 +375,16 @@ static void omap4_enter_idle_primary(struct omap4_processor_cx *cx)
 
 	cpu_pm_enter();
 
+	if (!keep_mpu_on) {
+		pwrdm_set_logic_retst(mpu_pd, cx->mpu_logic_state);
+		omap_set_pwrdm_state(mpu_pd, cx->mpu_state);
+	}
+
+	if (!keep_core_on) {
+		pwrdm_set_logic_retst(core_pd, cx->core_logic_state);
+		omap_set_pwrdm_state(core_pd, cx->core_state);
+	}
+
 	if (skip_off)
 		goto out;
 
@@ -388,16 +398,6 @@ static void omap4_enter_idle_primary(struct omap4_processor_cx *cx)
 	ret = pwrdm_wait_transition(cpu1_pd);
 	if (ret)
 		goto wake_cpu1;
-
-	if (!keep_mpu_on) {
-		pwrdm_set_logic_retst(mpu_pd, cx->mpu_logic_state);
-		omap_set_pwrdm_state(mpu_pd, cx->mpu_state);
-	}
-
-	if (!keep_core_on) {
-		pwrdm_set_logic_retst(core_pd, cx->core_logic_state);
-		omap_set_pwrdm_state(core_pd, cx->core_state);
-	}
 
 	pr_debug("%s: cpu0 down\n", __func__);
 
