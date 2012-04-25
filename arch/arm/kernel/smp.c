@@ -41,8 +41,6 @@
 #include <asm/ptrace.h>
 #include <asm/localtimer.h>
 
-#include <mach/sec_addon.h>
-
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
  * so we need some other way of telling a new secondary core
@@ -278,20 +276,6 @@ static void __cpuinit smp_store_cpu_info(unsigned int cpuid)
 }
 
 /*
- * Skip the secondary calibration on architectures sharing clock
- * with primary cpu. Archs can use ARCH_SKIP_SECONDARY_CALIBRATE
- * for this.
- */
-static inline int skip_secondary_calibrate(void)
-{
-#ifdef CONFIG_ARCH_SKIP_SECONDARY_CALIBRATE
-	return 0;
-#else
-	return -ENXIO;
-#endif
-}
-
-/*
  * This is the secondary CPU boot entry.  We're using this CPUs
  * idle thread stack, but a set of temporary page tables.
  */
@@ -325,7 +309,7 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 
 	notify_cpu_starting(cpu);
 
-	if (!booted && skip_secondary_calibrate())
+	if (!booted)
 		calibrate_delay();
 	booted = true;
 
@@ -353,7 +337,6 @@ asmlinkage void __cpuinit secondary_start_kernel(void)
 	local_irq_enable();
 	local_fiq_enable();
 
-	printk(KERN_INFO"CPU%u: Booting Complete Secondary processor\n", cpu);
 	/*
 	 * OK, it's off to the idle thread for us
 	 */
@@ -487,13 +470,10 @@ asmlinkage void __exception_irq_entry do_local_timer(struct pt_regs *regs)
 
 	if (local_timer_ack()) {
 		__inc_irq_stat(cpu, local_timer_irqs);
-		sec_debug_irq_log(0, do_local_timer, 1);
 		irq_enter();
 		ipi_timer();
 		irq_exit();
-		sec_debug_irq_log(0, do_local_timer, 2);
-	} else
-		sec_debug_irq_log(0, do_local_timer, 3);
+	}
 
 	set_irq_regs(old_regs);
 }
@@ -585,9 +565,6 @@ static void ipi_cpu_stop(unsigned int cpu)
 	local_fiq_disable();
 	local_irq_disable();
 
-	flush_cache_all();
-	local_flush_tlb_all();
-
 	while (1)
 		cpu_relax();
 }
@@ -649,18 +626,11 @@ static void ipi_cpu_backtrace(unsigned int cpu, struct pt_regs *regs)
  */
 asmlinkage void __exception_irq_entry do_IPI(int ipinr, struct pt_regs *regs)
 {
-	handle_IPI(ipinr, regs);
-}
-
-void handle_IPI(int ipinr, struct pt_regs *regs)
-{
 	unsigned int cpu = smp_processor_id();
 	struct pt_regs *old_regs = set_irq_regs(regs);
 
 	if (ipinr >= IPI_TIMER && ipinr < IPI_TIMER + NR_IPI)
 		__inc_irq_stat(cpu, ipi_irqs[ipinr - IPI_TIMER]);
-
-	sec_debug_irq_log(ipinr, do_IPI, 1);
 
 	switch (ipinr) {
 	case IPI_TIMER:
@@ -700,9 +670,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		       cpu, ipinr);
 		break;
 	}
-
-	sec_debug_irq_log(ipinr, do_IPI, 2);
-
 	set_irq_regs(old_regs);
 }
 
@@ -737,14 +704,4 @@ void smp_send_stop(void)
 int setup_profiling_timer(unsigned int multiplier)
 {
 	return -EINVAL;
-}
-
-static void flush_all_cpu_cache(void *info)
-{
-	flush_cache_all();
-}
-
-void flush_all_cpu_caches(void)
-{
-	on_each_cpu(flush_all_cpu_cache, NULL, 1);
 }
