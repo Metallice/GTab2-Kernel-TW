@@ -529,7 +529,7 @@ static int _remove_freq_request(struct omap_vdd_dvfs_info *dvfs_info,
  *
  * This runs down the table provided to find the match for main_volt
  * provided and sets up a scale request for the dependent domain
- * for the dependent voltage.
+ * for the dependent OPP.
  *
  * Returns 0 if all went well.
  */
@@ -541,7 +541,7 @@ static int _dep_scan_table(struct device *dev,
 	struct omap_vdd_dvfs_info *tdvfs_info;
 	struct opp *opp;
 	int i, ret;
-	unsigned long dep_volt = 0, new_freq = 0;
+	unsigned long dep_volt = 0, new_dep_volt = 0, new_freq = 0;
 
 	if (!dep_table) {
 		dev_err(dev, "%s: deptable not present for vdd%s\n",
@@ -572,14 +572,6 @@ static int _dep_scan_table(struct device *dev,
 		}
 	}
 
-	/* See if dep_volt is possible for the vdd*/
-	ret = _add_vdd_user(_voltdm_to_dvfs_info(dep_info->_dep_voltdm),
-			dev, dep_volt);
-	if (ret)
-		dev_err(dev, "%s: Failed to add dep to domain %s volt=%ld\n",
-				__func__, dep_info->name, dep_volt);
-
-	/* And also add corresponding freq request */
 	tdvfs_info = _voltdm_to_dvfs_info(dep_info->_dep_voltdm);
 	if (!tdvfs_info) {
 		dev_warn(dev, "%s: no dvfs_info\n",
@@ -595,18 +587,41 @@ static int _dep_scan_table(struct device *dev,
 
 	rcu_read_lock();
 	opp = _volt_to_opp(target_dev, dep_volt);
-	if (!IS_ERR(opp))
+	if (!IS_ERR(opp)) {
+		new_dep_volt = opp_get_voltage(opp);
 		new_freq = opp_get_freq(opp);
+	}
 	rcu_read_unlock();
 
-	if (new_freq) {
-		ret = _add_freq_request(tdvfs_info, dev, target_dev, new_freq);
-		if (ret) {
-			dev_err(target_dev, "%s: freqadd(%s) failed %d[f=%ld,"
-					"v=%ld]\n", __func__, dev_name(dev),
-					i, new_freq, dep_volt);
-			return ret;
-		}
+	if (!new_dep_volt || !new_freq) {
+		dev_err(target_dev, "%s: no valid OPP for voltage %lu\n",
+				__func__, dep_volt);
+		return -ENODATA;
+	}
+
+	/* TODO: In case of _add_vdd_user() failure
+	 * _dep_scan_table() will end up with previous voltage request,
+	 * but without a frequency request.
+	 * System should be left in previous state in case of failure.
+	 * Same issue is present in omap_device_scale() function.
+	 */
+	ret = _add_freq_request(tdvfs_info, dev, target_dev, new_freq);
+	if (ret) {
+		dev_err(target_dev, "%s: freqadd(%s) failed %d"
+				"[f=%ld, v=%ld(%ld)]\n",
+				__func__, dev_name(dev), ret, new_freq,
+				new_dep_volt, dep_volt);
+		return ret;
+	}
+
+	ret = _add_vdd_user(tdvfs_info, dev, new_dep_volt);
+	if (ret) {
+		dev_err(target_dev, "%s: vddadd(%s) failed %d"
+				"[f=%ld, v=%ld(%ld)]\n",
+				__func__, dev_name(dev), ret, new_freq,
+				new_dep_volt, dep_volt);
+		_remove_freq_request(tdvfs_info, dev, target_dev);
+		return ret;
 	}
 
 	return ret;
@@ -769,9 +784,10 @@ static int _dvfs_scale(struct device *req_dev, struct device *target_dev,
 	if (!curr_volt)
 		curr_volt = omap_get_operation_voltage(curr_vdata);
 
-	/* Make a decision to scale dependent domain based on nominal voltage */
-	if (omap_get_nominal_voltage(new_vdata) >
-			omap_get_nominal_voltage(curr_vdata)) {
+	if (curr_volt == new_volt) {
+		volt_scale_dir = DVFS_VOLT_SCALE_NONE;
+	} else if (curr_volt < new_volt) {
+
 		ret = _dep_scale_domains(target_dev, vdd);
 		if (ret) {
 			dev_err(target_dev,
@@ -779,13 +795,7 @@ static int _dvfs_scale(struct device *req_dev, struct device *target_dev,
 				__func__, ret, new_volt);
 			goto fail;
 		}
-	}
 
-	/* Now decide on switching OPP */
-
-	if (curr_volt == new_volt) {
-		volt_scale_dir = DVFS_VOLT_SCALE_NONE;
-	} else if (curr_volt < new_volt) {
 		ret = voltdm_scale(voltdm, new_vdata);
 		if (ret) {
 			dev_err(target_dev,
@@ -842,12 +852,8 @@ static int _dvfs_scale(struct device *req_dev, struct device *target_dev,
 	if (ret)
 		goto fail;
 
-	if (DVFS_VOLT_SCALE_DOWN == volt_scale_dir)
+	if (DVFS_VOLT_SCALE_DOWN == volt_scale_dir) {
 		voltdm_scale(voltdm, new_vdata);
-
-	/* Make a decision to scale dependent domain based on nominal voltage */
-	if (omap_get_nominal_voltage(new_vdata) <
-			omap_get_nominal_voltage(curr_vdata)) {
 		_dep_scale_domains(target_dev, vdd);
 	}
 
@@ -913,7 +919,7 @@ int omap_device_scale(struct device *req_dev, struct device *target_dev,
 	/* Lock me to ensure cross domain scaling is secure */
 	mutex_lock(&omap_dvfs_lock);
 	/* I would like CPU to be active always at this point */
-	pm_qos_update_request(&omap_dvfs_pm_qos_handle, 1);
+	pm_qos_update_request(&omap_dvfs_pm_qos_handle, 0);
 
 	rcu_read_lock();
 	opp = opp_find_freq_ceil(target_dev, &freq);
