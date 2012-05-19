@@ -1120,11 +1120,11 @@ static irqreturn_t ts_irq_handler(int irq, void *handle)
 		}
 
 		if ((buf[i] & 0x80) == 0) {
-#if TRACKING_COORD
-			pr_info("tsp: finger %d up (%d, %d)\n", id, x, y);
-#else
-			pr_info("tsp: finger %d up\n", id);
-#endif
+//#if TRACKING_COORD
+//			pr_info("tsp: finger %d up (%d, %d)\n", id, x, y);
+//#else
+//			pr_info("tsp: finger %d up\n", id);
+//#endif
 			input_mt_slot(ts->input_dev, id);
 			input_mt_report_slot_state(ts->input_dev,
 						MT_TOOL_FINGER, false);
@@ -1141,15 +1141,15 @@ static irqreturn_t ts_irq_handler(int irq, void *handle)
 
 		if (ts->finger_state[id] == 0) {
 			ts->finger_state[id] = 1;
-#if TRACKING_COORD
-			pr_info("tsp: finger %d down (%d, %d)\n", id, x, y);
-#else
-			pr_info("tsp: finger %d down\n", id);
-#endif
-		} else {
-#if TRACKING_COORD
-			pr_info("tsp: finger %d move (%d, %d)\n", id, x, y);
-#endif
+//#if TRACKING_COORD
+//			pr_info("tsp: finger %d down (%d, %d)\n", id, x, y);
+//#else
+//			pr_info("tsp: finger %d down\n", id);
+//#endif
+//		} else {
+//#if TRACKING_COORD
+//			pr_info("tsp: finger %d move (%d, %d)\n", id, x, y);
+//#endif
 		}
 	}
 
