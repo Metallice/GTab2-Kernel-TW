@@ -67,11 +67,9 @@ static void irled_work(struct work_struct *work)
 	int ret;
 
 	ret =
-	    ir_data.cpu_frequency;
-//	    omap_cpufreq_max_limit(DVFS_LOCK_ID_IR_LED, ir_data.cpu_frequency);
+	    omap_cpufreq_max_limit(DVFS_LOCK_ID_IR_LED, ir_data.cpu_frequency);
 	ret |=
-	    ir_data.cpu_frequency;
-//	    omap_cpufreq_min_limit(DVFS_LOCK_ID_IR_LED, ir_data.cpu_frequency);
+	    omap_cpufreq_min_limit(DVFS_LOCK_ID_IR_LED, ir_data.cpu_frequency);
 
 	if (unlikely(ret < 0))
 		pr_err("irled: failed to lock cpufreq\n");
@@ -124,8 +122,8 @@ static void irled_work(struct work_struct *work)
 
 	local_irq_enable();
 
-//	omap_cpufreq_min_limit_free(DVFS_LOCK_ID_IR_LED);
-//	omap_cpufreq_max_limit_free(DVFS_LOCK_ID_IR_LED);
+	omap_cpufreq_min_limit_free(DVFS_LOCK_ID_IR_LED);
+	omap_cpufreq_max_limit_free(DVFS_LOCK_ID_IR_LED);
 
 	gpio_direction_output(irled_gpios[GPIO_IRDA_EN].gpio, 0);
 }
