@@ -580,7 +580,7 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 	}
 
 	/* 10us transition time */
-	policy->cpuinfo.transition_latency = 10 * 1000;
+	policy->cpuinfo.transition_latency = 40 * 1000;
 
 #ifdef CONFIG_DVFS_LIMIT
 	if (policy->cpu == 0) {
