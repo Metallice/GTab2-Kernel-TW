@@ -2842,7 +2842,7 @@ int dispc_enable_gamma(enum omap_channel ch, u8 gamma)
 			dispc_write_reg(DISPC_GAMMA_TABLE + (channel*4), temp);
 		}
 	}
-	enabled = enabled & ~(1 << channel) | (gamma ? (1 << channel) : 0);
+	enabled = enabled & (~(1 << channel) | (gamma ? (1 << channel) : 0));
 	REG_FLD_MOD(DISPC_CONFIG, (enabled & 1), 3, 3);
 	REG_FLD_MOD(DISPC_CONFIG, !!(enabled & 6), 9, 9);
 
