@@ -240,14 +240,12 @@ static void __init omap4_check_features(void)
 			/* High performance device */
 			omap4_features |= OMAP4_HAS_MPU_1GHZ;
 			omap4_features |= OMAP4_HAS_MPU_1_2GHZ;
-			omap4_features |= OMAP4_HAS_MPU_1_35GHZ;
 		break;
 		case 1:
 		default:
 			/* Standard device. Or is it?! [Metallice] */
 			omap4_features |= OMAP4_HAS_MPU_1GHZ;
 			omap4_features |= OMAP4_HAS_MPU_1_2GHZ;
-			omap4_features |= OMAP4_HAS_MPU_1_35GHZ;
 		break;
 		}
 	}
