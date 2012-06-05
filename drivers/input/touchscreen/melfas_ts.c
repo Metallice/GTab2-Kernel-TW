@@ -13,9 +13,9 @@
  *
  */
 
-#define DEBUG_PRINT			1
+//#define DEBUG_PRINT			1
 #define FACTORY_TESTING			1
-#define TOUCH_BOOST			1
+//#define TOUCH_BOOST			1
 
 #include <linux/module.h>
 #include <linux/delay.h>
@@ -1080,7 +1080,7 @@ static irqreturn_t ts_irq_handler(int irq, void *handle)
 
 #if TOUCH_BOOST
 	if (false == boost) {
-		omap_cpufreq_min_limit(DVFS_LOCK_ID_TSP, 600000);
+		omap_cpufreq_min_limit(DVFS_LOCK_ID_TSP, 300000);
 		boost = true;
 	}
 #endif
