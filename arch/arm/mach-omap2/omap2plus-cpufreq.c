@@ -576,7 +576,6 @@ static int __cpuinit omap_cpu_init(struct cpufreq_policy *policy)
 
 	for (i = 0; freq_table[i].frequency != CPUFREQ_TABLE_END; i++)
 		max_freq = max(freq_table[i].frequency, max_freq);
-	max_thermal = max_freq;
 
 	/*
 	 * On OMAP SMP configuartion, both processors share the voltage
@@ -747,6 +746,8 @@ static int __init omap_cpufreq_init(void)
 
 	ret = cpufreq_register_driver(&omap_driver);
 	omap_cpufreq_ready = !ret;
+
+	max_thermal = max_freq;
 
 	if (!ret) {
 		int t;
