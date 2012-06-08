@@ -16,7 +16,6 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/slab.h>
-#include <linux/mm.h>
 
 #include <mach/hardware.h>
 #include <mach/irqs.h>
@@ -900,7 +899,6 @@ static void omap_init_gpu(void)
 	pdata->device_shutdown = omap_device_shutdown;
 	pdata->opp_get_opp_count = opp_get_opp_count;
 	pdata->opp_find_freq_ceil = opp_find_freq_ceil;
-	pdata->access_process_vm = access_process_vm;
 
 	pdata->ovfreqs = 0;
 	if (cpu_is_omap446x())
