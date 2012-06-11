@@ -386,6 +386,12 @@ config OMAP_IPU_DEEPIDLE
 	help
 	  Enable C-states > C1 during hardware-accelerated video playback.
 
+config CONFIG_4430_OC_FREQS
+	bool "Enable 4430 Overclock Frequencies 1.2/1.35GHz"
+	default n
+	help
+		Enable 4430 Overclock Frequencies 1.2/1.35GHz
+
 endmenu
 
 endif

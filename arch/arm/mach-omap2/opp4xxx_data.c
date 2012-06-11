@@ -468,9 +468,10 @@ int __init omap4_opp_init(void)
 			ARRAY_SIZE(omap446x_opp_def_list));
 
 	if (!r) {
-		if (omap4_has_mpu_1_2ghz())
-			omap4_mpu_opp_enable(1200000000);
-			omap4_mpu_opp_enable(1350000000);
+#ifdef CONFIG_4430_OC_FREQS
+		omap4_mpu_opp_enable(1200000000);
+		omap4_mpu_opp_enable(1350000000);
+#endif
         
 	}
 
