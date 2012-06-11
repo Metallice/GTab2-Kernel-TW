@@ -20,7 +20,7 @@
 #define GAMMA_TBL_SZ 256
 #define NO_OF_GAMMA_TABLES ARRAY_SIZE(gamma_table)
 
-u8 gamma_0_2[GAMMA_TBL_SZ] = {
+const u8 gamma_0_2[GAMMA_TBL_SZ] = {
 0x0,
 0x54, 0x60, 0x68, 0x6f,
 0x74, 0x78, 0x7c, 0x7f,
@@ -700,7 +700,7 @@ u8 gamma_2_0[GAMMA_TBL_SZ] = {
 0xfb, 0xfd, 0xff,
 };
 
-u8 *gamma_table[] = {gamma_0_2, gamma_0_4, gamma_0_6,
+const u8 *gamma_table[] = {gamma_0_2, gamma_0_4, gamma_0_6,
 		gamma_0_8, gamma_1_0, gamma_1_2, gamma_1_4, gamma_1_6,
 		gamma_1_8, gamma_2_0};
 
