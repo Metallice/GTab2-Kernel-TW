@@ -137,6 +137,13 @@ config CPU_FREQ_DEFAULT_GOV_WHEATLEY
 	help
 	  Use the CPUFreq governor 'wheatley' as default.
 
+config CPU_FREQ_DEFAULT_GOV_NONDEMAND
+	bool "nondemand"
+	select CPU_FREQ_GOV_NONDEMAND
+	select CPU_FREQ_GOV_PERFORMANCE
+	help
+	  Use the CPUFreq governor 'nondemand' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -242,6 +249,10 @@ config CPU_FREQ_GOV_LAZY
 
 config CPU_FREQ_GOV_WHEATLEY
 	tristate "'wheatley' cpufreq governor"
+	depends on CPU_FREQ
+
+config CPU_FREQ_GOV_NONDEMAND
+	tristate "'nondemand' cpufreq governor"
 	depends on CPU_FREQ
 
 menu "x86 CPU frequency scaling drivers"

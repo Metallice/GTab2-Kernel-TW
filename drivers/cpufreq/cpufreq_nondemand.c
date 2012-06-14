@@ -1,5 +1,6 @@
 /*
  *  drivers/cpufreq/cpufreq_ondemand.c
+ *  drivers/cpufreq/cpufreq_nodemand.c [Metallice]
  *
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
@@ -28,15 +29,30 @@
  * It helps to keep variable names smaller, simpler
  */
 
-#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
-#define DEF_FREQUENCY_UP_THRESHOLD		(80)
-#define DEF_SAMPLING_DOWN_FACTOR		(2)
-#define MAX_SAMPLING_DOWN_FACTOR		(100000)
-#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(80)
+/* For Down Differential and Sampling Down Factor - Keep values high as governor tries to ramp up to frequency step and stay there to prevent frequency bouncing */
+#define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(20)
+	#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(1)
+	#define MICRO_FREQUENCY_UP_THRESHOLD		(95)
+#define DEF_SAMPLING_DOWN_FACTOR		(5)
+	#define MAX_SAMPLING_DOWN_FACTOR		(100000) 
+/* If you want to improve battery savings, change up thresholds instead */
+
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
+
+#define UP_THRESHOLD_AT_MIN_FREQ		(70) /* 180 Mhz */
+#define UP_THRESHOLD_AT_2ND_FREQ		(78) /* 300 Mhz */
+#define UP_THRESHOLD_AT_3RD_FREQ		(87) /* 600 Mhz */
+#define UP_THRESHOLD_AT_4TH_FREQ		(95) /* 800 Mhz */
+
+/* Up threshold for freq below max step if 4TH_FREQ isn't freq below max step */
+#define DEF_FREQUENCY_UP_THRESHOLD		(98)
+
+/* For now customize for device */
+#define FREQ_ABOVE_MIN			(600000)
+#define FREQ_ABOVE_2ND			(800000)
+#define FREQ_ABOVE_3RD			(1008000)
 
 /*
  * The polling frequency of this governor depends on the capability of
@@ -60,11 +76,11 @@ static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_NODEMAND
 static
 #endif
-struct cpufreq_governor cpufreq_gov_ondemand = {
-       .name                   = "ondemand",
+struct cpufreq_governor cpufreq_gov_nodemand = {
+       .name                   = "nodemand",
        .governor               = cpufreq_governor_dbs,
        .max_transition_latency = TRANSITION_LATENCY_LIMIT,
        .owner                  = THIS_MODULE,
@@ -111,12 +127,28 @@ static struct dbs_tuners {
 	unsigned int sampling_down_factor;
 	unsigned int powersave_bias;
 	unsigned int io_is_busy;
+	/* nondemand tuners by Metallice */
+	unsigned int up_threshold_at_min_freq;
+	unsigned int up_threshold_at_2nd_freq;
+	unsigned int up_threshold_at_3rd_freq;
+	unsigned int up_threshold_at_4th_freq;
+	unsigned int freq_above_min;
+	unsigned int freq_above_2nd;
+	unsigned int freq_above_3rd;
 } dbs_tuners_ins = {
 	.up_threshold = DEF_FREQUENCY_UP_THRESHOLD,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
+	/* nondemand tuners by Metallice */
+	.up_threshold_at_min_freq = UP_THRESHOLD_AT_MIN_FREQ,
+	.up_threshold_at_2nd_freq = UP_THRESHOLD_AT_2ND_FREQ,
+	.up_threshold_at_3rd_freq = UP_THRESHOLD_AT_3RD_FREQ,
+	.up_threshold_at_4th_freq = UP_THRESHOLD_AT_4TH_FREQ,
+	.freq_above_min = FREQ_ABOVE_MIN,
+	.freq_above_2nd = FREQ_ABOVE_2ND,
+	.freq_above_3rd = FREQ_ABOVE_3RD,
 };
 
 static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
@@ -217,18 +249,18 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	return freq_hi;
 }
 
-static void ondemand_powersave_bias_init_cpu(int cpu)
+static void nodemand_powersave_bias_init_cpu(int cpu)
 {
 	struct cpu_dbs_info_s *dbs_info = &per_cpu(od_cpu_dbs_info, cpu);
 	dbs_info->freq_table = cpufreq_frequency_get_table(cpu);
 	dbs_info->freq_lo = 0;
 }
 
-static void ondemand_powersave_bias_init(void)
+static void nodemand_powersave_bias_init(void)
 {
 	int i;
 	for_each_online_cpu(i) {
-		ondemand_powersave_bias_init_cpu(i);
+		nodemand_powersave_bias_init_cpu(i);
 	}
 }
 
@@ -255,6 +287,14 @@ show_one(up_threshold, up_threshold);
 show_one(sampling_down_factor, sampling_down_factor);
 show_one(ignore_nice_load, ignore_nice);
 show_one(powersave_bias, powersave_bias);
+/* nondemand by Metallice */
+show_one(up_threshold_at_min_freq, up_threshold_at_min_freq);
+show_one(up_threshold_at_2nd_freq, up_threshold_at_2nd_freq);
+show_one(up_threshold_at_3rd_freq, up_threshold_at_3rd_freq);
+show_one(up_threshold_at_4th_freq, up_threshold_at_4th_freq);
+show_one(freq_above_min, freq_above_min);
+show_one(freq_above_2nd, freq_above_2nd);
+show_one(freq_above_3rd, freq_above_3rd);
 
 static ssize_t store_sampling_rate(struct kobject *a, struct attribute *b,
 				   const char *buf, size_t count)
@@ -363,7 +403,104 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 		input = 1000;
 
 	dbs_tuners_ins.powersave_bias = input;
-	ondemand_powersave_bias_init();
+	nodemand_powersave_bias_init();
+	return count;
+}
+
+/* nondemand by Metallice */
+static ssize_t store_up_threshold_at_min_freq(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > MAX_FREQUENCY_UP_THRESHOLD ||
+	    input < MIN_FREQUENCY_UP_THRESHOLD) {
+		return -EINVAL;
+	}
+	dbs_tuners_ins.up_threshold_at_min_freq = input;
+	return count;
+}
+
+static ssize_t store_up_threshold_at_2nd_freq(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > MAX_FREQUENCY_UP_THRESHOLD ||
+	    input < MIN_FREQUENCY_UP_THRESHOLD) {
+		return -EINVAL;
+	}
+	dbs_tuners_ins.up_threshold_at_2nd_freq = input;
+	return count;
+}
+
+static ssize_t store_up_threshold_at_3rd_freq(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > MAX_FREQUENCY_UP_THRESHOLD ||
+	    input < MIN_FREQUENCY_UP_THRESHOLD) {
+		return -EINVAL;
+	}
+	dbs_tuners_ins.up_threshold_at_3rd_freq = input;
+	return count;
+}
+
+static ssize_t store_up_threshold_at_4th_freq(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input > MAX_FREQUENCY_UP_THRESHOLD ||
+	    input < MIN_FREQUENCY_UP_THRESHOLD) {
+		return -EINVAL;
+	}
+	dbs_tuners_ins.up_threshold_at_4th_freq = input;
+	return count;
+}
+
+static ssize_t store_freq_above_min(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+	dbs_tuners_ins.freq_above_min = input;
+	return count;
+}
+
+static ssize_t store_freq_above_2nd(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+	dbs_tuners_ins.freq_above_2nd = input;
+	return count;
+}
+
+static ssize_t store_freq_above_3rd(struct kobject *a, struct attribute *b,
+				   const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+	dbs_tuners_ins.freq_above_3rd = input;
 	return count;
 }
 
@@ -373,6 +510,14 @@ define_one_global_rw(up_threshold);
 define_one_global_rw(sampling_down_factor);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(powersave_bias);
+/* nondemand by Metallice */
+define_one_global_rw(up_threshold_at_min_freq);
+define_one_global_rw(up_threshold_at_2nd_freq);
+define_one_global_rw(up_threshold_at_3rd_freq);
+define_one_global_rw(up_threshold_at_4th_freq);
+define_one_global_rw(freq_above_min);
+define_one_global_rw(freq_above_2nd);
+define_one_global_rw(freq_above_3rd);
 
 static struct attribute *dbs_attributes[] = {
 	&sampling_rate_min.attr,
@@ -382,12 +527,20 @@ static struct attribute *dbs_attributes[] = {
 	&ignore_nice_load.attr,
 	&powersave_bias.attr,
 	&io_is_busy.attr,
+	/* nondemand by Metallice */
+	&up_threshold_at_min_freq.attr,
+	&up_threshold_at_2nd_freq.attr,
+	&up_threshold_at_3rd_freq.attr,
+	&up_threshold_at_4th_freq.attr,
+	&freq_above_min.attr,
+	&freq_above_2nd.attr,
+	&freq_above_3rd.attr,
 	NULL
 };
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "ondemand",
+	.name = "nodemand",
 };
 
 /************************** sysfs end ************************/
@@ -409,6 +562,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	struct cpufreq_policy *policy;
 	unsigned int j;
+	int up_threshold = dbs_tuners_ins.up_threshold;
 
 	this_dbs_info->freq_lo = 0;
 	policy = this_dbs_info->cur_policy;
@@ -494,6 +648,18 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency increase */
+	if (policy->cur == dbs_tuners_ins.freq_above_3rd) {
+		up_threshold = dbs_tuners_ins.up_threshold_at_4th_freq;
+	}
+	if (policy->cur == dbs_tuners_ins.freq_above_2nd) {
+		up_threshold = dbs_tuners_ins.up_threshold_at_3rd_freq;
+	}
+	if (policy->cur == dbs_tuners_ins.freq_above_min) {
+		up_threshold = dbs_tuners_ins.up_threshold_at_2nd_freq;
+	}
+	if (policy->cur < dbs_tuners_ins.freq_above_min) {
+		up_threshold = dbs_tuners_ins.up_threshold_at_min_freq;
+	}
 	if (max_load_freq > dbs_tuners_ins.up_threshold * policy->cur) {
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
@@ -511,11 +677,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	/*
 	 * The optimal frequency is the frequency that is the lowest that
 	 * can support the current CPU usage without triggering the up
-	 * policy. To be safe, we focus 10 points under the threshold.
+	 * policy. To be safe, we focus DOWN_DIFFERENTIAL points under
+	 * the threshold.
 	 */
 	if (max_load_freq <
 	    (dbs_tuners_ins.up_threshold - dbs_tuners_ins.down_differential) *
-	     policy->cur) {
+	    policy->cur) {
 		unsigned int freq_next;
 		freq_next = max_load_freq /
 				(dbs_tuners_ins.up_threshold -
@@ -651,7 +818,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		}
 		this_dbs_info->cpu = cpu;
 		this_dbs_info->rate_mult = 1;
-		ondemand_powersave_bias_init_cpu(cpu);
+		nodemand_powersave_bias_init_cpu(cpu);
 		/*
 		 * Start the timerschedule work, when this governor
 		 * is used for first time
@@ -736,22 +903,22 @@ static int __init cpufreq_gov_dbs_init(void)
 	//		MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	//}
 
-	return cpufreq_register_governor(&cpufreq_gov_ondemand);
+	return cpufreq_register_governor(&cpufreq_gov_nodemand);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_ondemand);
+	cpufreq_unregister_governor(&cpufreq_gov_nodemand);
 }
 
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_DESCRIPTION("'cpufreq_ondemand' - A dynamic cpufreq governor for "
+MODULE_DESCRIPTION("'cpufreq_nodemand' - A dynamic cpufreq governor for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_NODEMAND
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
