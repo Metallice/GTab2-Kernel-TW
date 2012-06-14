@@ -1,6 +1,6 @@
 /*
  *  drivers/cpufreq/cpufreq_ondemand.c
- *  drivers/cpufreq/cpufreq_nodemand.c [Metallice]
+ *  drivers/cpufreq/cpufreq_nondemand.c [Metallice]
  *
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
@@ -76,11 +76,11 @@ static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_NODEMAND
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_NONDEMAND
 static
 #endif
-struct cpufreq_governor cpufreq_gov_nodemand = {
-       .name                   = "nodemand",
+struct cpufreq_governor cpufreq_gov_nondemand = {
+       .name                   = "nondemand",
        .governor               = cpufreq_governor_dbs,
        .max_transition_latency = TRANSITION_LATENCY_LIMIT,
        .owner                  = THIS_MODULE,
@@ -249,18 +249,18 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 	return freq_hi;
 }
 
-static void nodemand_powersave_bias_init_cpu(int cpu)
+static void nondemand_powersave_bias_init_cpu(int cpu)
 {
 	struct cpu_dbs_info_s *dbs_info = &per_cpu(od_cpu_dbs_info, cpu);
 	dbs_info->freq_table = cpufreq_frequency_get_table(cpu);
 	dbs_info->freq_lo = 0;
 }
 
-static void nodemand_powersave_bias_init(void)
+static void nondemand_powersave_bias_init(void)
 {
 	int i;
 	for_each_online_cpu(i) {
-		nodemand_powersave_bias_init_cpu(i);
+		nondemand_powersave_bias_init_cpu(i);
 	}
 }
 
@@ -403,7 +403,7 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 		input = 1000;
 
 	dbs_tuners_ins.powersave_bias = input;
-	nodemand_powersave_bias_init();
+	nondemand_powersave_bias_init();
 	return count;
 }
 
@@ -540,7 +540,7 @@ static struct attribute *dbs_attributes[] = {
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "nodemand",
+	.name = "nondemand",
 };
 
 /************************** sysfs end ************************/
@@ -818,7 +818,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		}
 		this_dbs_info->cpu = cpu;
 		this_dbs_info->rate_mult = 1;
-		nodemand_powersave_bias_init_cpu(cpu);
+		nondemand_powersave_bias_init_cpu(cpu);
 		/*
 		 * Start the timerschedule work, when this governor
 		 * is used for first time
@@ -903,22 +903,22 @@ static int __init cpufreq_gov_dbs_init(void)
 	//		MIN_SAMPLING_RATE_RATIO * jiffies_to_usecs(10);
 	//}
 
-	return cpufreq_register_governor(&cpufreq_gov_nodemand);
+	return cpufreq_register_governor(&cpufreq_gov_nondemand);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_nodemand);
+	cpufreq_unregister_governor(&cpufreq_gov_nondemand);
 }
 
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_DESCRIPTION("'cpufreq_nodemand' - A dynamic cpufreq governor for "
+MODULE_DESCRIPTION("'cpufreq_nondemand' - A dynamic cpufreq governor for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_NODEMAND
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_NONDEMAND
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
