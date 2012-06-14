@@ -15,7 +15,7 @@
 #include <mach/lpddr2-elpida.h>
 
 const struct lpddr2_timings lpddr2_elpida_timings_400_mhz = {
-	.max_freq	= 400000000,
+	.max_freq	= 533000000,
 	.RL		= 6,
 	.tRPab		= 21,
 	.tRCD		= 18,
