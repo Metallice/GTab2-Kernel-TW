@@ -69,7 +69,7 @@ struct omap_volt_data omap443x_vdd_mpu_volt_data[] = {
 			OMAP44XX_CONTROL_FUSE_MPU_OPPNITROSB,
 			0xfa, 0x27, OMAP_ABB_FAST_OPP),
 	VOLT_DATA_DEFINE(OMAP4430_VDD_MPU_OPPNITROSBPLUS_UV, 0,
-			OMAP44XX_CONTROL_FUSE_MPU_OPPNITROSB,
+			OMAP44XX_CONTROL_FUSE_MPU_OPPNITROSB2,
 			0xfa, 0x27, OMAP_ABB_FAST_OPP),
 	VOLT_DATA_DEFINE(OMAP4430_VDD_MPU_OPPNITROSB2_UV, 0,
 			OMAP44XX_CONTROL_FUSE_MPU_OPPNITROSB2,
@@ -184,12 +184,10 @@ static struct omap_opp_def __initdata omap443x_opp_def_list[] = {
 	OPP_INITIALIZER("mpu", "dpll_mpu_ck", "mpu", true,
 			1008000000, OMAP4430_VDD_MPU_OPPNITRO_UV),
 	/* MPU OPP4 - OPP-NITROSB */
-#ifdef CONFIG_4430_OC_FREQS
-	OPP_INITIALIZER("mpu", "dpll_mpu_ck", "mpu", true,
+	OPP_INITIALIZER("mpu", "dpll_mpu_ck", "mpu", false,
 			1200000000, OMAP4430_VDD_MPU_OPPNITROSB_UV),
-	OPP_INITIALIZER("mpu", "dpll_mpu_ck", "mpu", true,
+	OPP_INITIALIZER("mpu", "dpll_mpu_ck", "mpu", false,
 			1350000000, OMAP4430_VDD_MPU_OPPNITROSBPLUS_UV),
-#endif
 	/* L3 OPP1 - OPP50 */
 	OPP_INITIALIZER("l3_main_1", "virt_l3_ck", "core", true,
 			100000000, OMAP4430_VDD_CORE_OPP50_UV),
@@ -470,9 +468,12 @@ int __init omap4_opp_init(void)
 			ARRAY_SIZE(omap446x_opp_def_list));
 
 	if (!r) {
+#ifdef CONFIG_4430_OC_FREQS
+			omap4_mpu_opp_enable(1200000000);
+			omap4_mpu_opp_enable(1350000000);
+#endif
         
-	}
-
+		}
 	return r;
 }
 device_initcall(omap4_opp_init);
