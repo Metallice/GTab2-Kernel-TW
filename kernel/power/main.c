@@ -345,9 +345,9 @@ static void cpufreq_min_limit(const char *buf, size_t count)
 
 	if (cpufreq_min_limit_val == -1) {
 		if (cpufreq_min_locked) {
-			omap_cpufreq_min_limit_free(DVFS_LOCK_ID_USER);
-			cpufreq_min_locked = 0;
-			ret = 0;
+//			omap_cpufreq_min_limit_free(DVFS_LOCK_ID_USER);
+//			cpufreq_min_locked = 0;
+//			ret = 0;
 		} else {
 			pr_warn("%s: there is no min limit!\n", __func__);
 			ret = -EINVAL;
@@ -358,14 +358,14 @@ static void cpufreq_min_limit(const char *buf, size_t count)
 	pr_debug("%s: current max freq=%d req max freq=%d\n",
 		__func__, cpufreq_max_limit_val, cpufreq_min_limit_val);
 
-	if (cpufreq_min_locked)
-		omap_cpufreq_min_limit_free(DVFS_LOCK_ID_USER);
+//	if (cpufreq_min_locked)
+//		omap_cpufreq_min_limit_free(DVFS_LOCK_ID_USER);
 
-	omap_cpufreq_min_limit(DVFS_LOCK_ID_USER, cpufreq_min_limit_val);
-	cpufreq_min_locked = 1;
+//	omap_cpufreq_min_limit(DVFS_LOCK_ID_USER, cpufreq_min_limit_val);
+//	cpufreq_min_locked = 1;
 
 out:
-	if (ret < 0)
+//	if (ret < 0)
 		cpufreq_min_limit_val = temp;
 
 	mutex_unlock(&cpufreq_min_mutex);
@@ -403,9 +403,9 @@ static void cpufreq_max_limit(const char *buf)
 
 	if (cpufreq_max_limit_val == -1) {
 		if (cpufreq_max_locked) {
-			omap_cpufreq_max_limit_free(DVFS_LOCK_ID_USER);
-			cpufreq_max_locked = 0;
-			ret = 0;
+//			omap_cpufreq_max_limit_free(DVFS_LOCK_ID_USER);
+//			cpufreq_max_locked = 0;
+//			ret = 0;
 		} else {
 			pr_warn("%s: there is no max limit!\n", __func__);
 			ret = -EINVAL;
@@ -416,14 +416,14 @@ static void cpufreq_max_limit(const char *buf)
 	pr_debug("%s: current min freq=%d req max freq=%d\n",
 		__func__, cpufreq_min_limit_val, cpufreq_max_limit_val);
 
-	if (cpufreq_max_locked)
-		omap_cpufreq_max_limit_free(DVFS_LOCK_ID_USER);
+//	if (cpufreq_max_locked)
+//		omap_cpufreq_max_limit_free(DVFS_LOCK_ID_USER);
 
-	omap_cpufreq_max_limit(DVFS_LOCK_ID_USER, cpufreq_max_limit_val);
-	cpufreq_max_locked = 1;
+//	omap_cpufreq_max_limit(DVFS_LOCK_ID_USER, cpufreq_max_limit_val);
+//	cpufreq_max_locked = 1;
 
 out:
-	if (ret < 0)
+//	if (ret < 0)
 		cpufreq_max_limit_val = temp;
 
 	mutex_unlock(&cpufreq_max_mutex);
