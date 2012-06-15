@@ -87,7 +87,7 @@ const struct lpddr2_timings lpddr2_jedec_timings_333_mhz = {
 
 /* Base AC Timing values specified by JESD209-2 for 200 MHz operation */
 const struct lpddr2_timings lpddr2_jedec_timings_200_mhz = {
-	.max_freq	= 300000000,
+	.max_freq	= 266000000,
 	.RL		= 4,
 	.tRPab		= 21,
 	.tRCD		= 18,

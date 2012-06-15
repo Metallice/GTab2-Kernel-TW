@@ -540,7 +540,7 @@ static u32 get_ddr_phy_ctrl_1(u32 freq, u8 RL)
 
 	if (freq <= 100000000)
 		val = EMIF_DLL_SLAVE_DLY_CTRL_100_MHZ_AND_LESS;
-	else if (freq <= 300000000)
+	else if (freq <= 266000000)
 		val = EMIF_DLL_SLAVE_DLY_CTRL_200_MHZ;
 	else
 		val = EMIF_DLL_SLAVE_DLY_CTRL_400_MHZ;

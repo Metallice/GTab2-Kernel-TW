@@ -61,7 +61,7 @@ const struct lpddr2_timings lpddr2_elpida_timings_333_mhz = {
 };
 
 const struct lpddr2_timings lpddr2_elpida_timings_200_mhz = {
-	.max_freq	= 300000000,
+	.max_freq	= 266000000,
 	.RL		= 4,
 	.tRPab		= 21,
 	.tRCD		= 18,
