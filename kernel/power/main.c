@@ -362,7 +362,7 @@ static void cpufreq_min_limit(const char *buf, size_t count)
 //		omap_cpufreq_min_limit_free(DVFS_LOCK_ID_USER);
 
 //	omap_cpufreq_min_limit(DVFS_LOCK_ID_USER, cpufreq_min_limit_val);
-//	cpufreq_min_locked = 1;
+	cpufreq_min_locked = 1;
 
 out:
 //	if (ret < 0)
