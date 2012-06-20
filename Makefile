@@ -193,11 +193,7 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
 export KBUILD_BUILDHOST := $(SUBARCH)
 ARCH		?= arm
-<<<<<<< HEAD
 CROSS_COMPILE	?= arm-none-linux-gnueabi-
-=======
-CROSS_COMPILE	?= /data/linaro/bin/arm-linux-gnueabihf-
->>>>>>> 74151e9... Switched to Linaro 12.05 gcc 4.7 with additional optimizations
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -372,8 +368,6 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -fmodulo-sched -fmodulo-sched-allow-regmoves \
-		   -funswitch-loops -fpredictive-commoning -fgcse-after-reload \
 		   -fno-delete-null-pointer-checks
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
