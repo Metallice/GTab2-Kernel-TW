@@ -23,6 +23,18 @@
 #include <linux/rbtree.h>
 #include <linux/ion.h>
 
+struct ion_mapping;
+
+struct ion_dma_mapping {
+	struct kref ref;
+	struct scatterlist *sglist;
+};
+
+struct ion_kernel_mapping {
+	struct kref ref;
+	void *vaddr;
+};
+
 struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
 
 /**
@@ -41,7 +53,7 @@ struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
  * @kmap_cnt:		number of times the buffer is mapped to the kernel
  * @vaddr:		the kenrel mapping if kmap_cnt is not zero
  * @dmap_cnt:		number of times the buffer is mapped for dma
- * @sg_table:		the sg table for the buffer if dmap_cnt is not zero
+ * @sglist:		the scatterlist for the buffer is dmap_cnt is not zero
 */
 struct ion_buffer {
 	struct kref ref;
@@ -58,9 +70,8 @@ struct ion_buffer {
 	int kmap_cnt;
 	void *vaddr;
 	int dmap_cnt;
-	struct sg_table *sg_table;
+	struct scatterlist *sglist;
 	bool map_cacheable;
-	struct sg_table *sg_table;
 };
 
 /**
@@ -84,7 +95,7 @@ struct ion_heap_ops {
 	void (*free) (struct ion_buffer *buffer);
 	int (*phys) (struct ion_heap *heap, struct ion_buffer *buffer,
 		     ion_phys_addr_t *addr, size_t *len);
-	struct sg_table *(*map_dma) (struct ion_heap *heap,
+	struct scatterlist *(*map_dma) (struct ion_heap *heap,
 					struct ion_buffer *buffer);
 	void (*unmap_dma) (struct ion_heap *heap, struct ion_buffer *buffer);
 	void * (*map_kernel) (struct ion_heap *heap, struct ion_buffer *buffer);
